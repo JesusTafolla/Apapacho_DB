@@ -1,3 +1,4 @@
+
 CREATE TABLE `Etiquetas` (
   `Alianzas` integer,
   `Coyametla` integer,
