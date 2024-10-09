@@ -1,81 +1,50 @@
-# Apapacho_DB
-This project will be encharged of manage, deploy and generate a pilot or engine to generate an inventory stock or something related/useful for that one.
-<!--Absolutely! Below is a complete implementation of an inventory management system using Flask, SQLAlchemy, and a PostgreSQL database. The code includes all necessary components, from models to routes and the HTML frontend.
+Step 1: Update the Database Schema
+The table will store all types of items, regardless of category:
 
-### Complete Flask Application
-
-#### Step 1: Setup
-
-First, ensure you have the required libraries installed. You can install them using pip:
-
-```bash
-pip install Flask Flask-SQLAlchemy psycopg2 pandas twilio
-```
-
-#### Step 2: Database Setup
-
-Make sure you have PostgreSQL set up and a database created. Here's a sample schema for your database:
-
-```sql
-CREATE DATABASE inventory_db;
-
-CREATE TABLE food_items (
+sql
+Copiar código
+CREATE TABLE inventory_items (
     id SERIAL PRIMARY KEY,
     item_name VARCHAR(100) NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 0,
-    expiration_date DATE
+    category VARCHAR(50) NOT NULL -- E.g., 'supplies', 'labels', 'coffee beans', etc.
 );
+Step 2: Update the Flask Application Code (app.py)
+Here’s the updated Flask app using a single inventory model that suits your coffee roaster business needs:
 
-CREATE TABLE beverage_items (
-    id SERIAL PRIMARY KEY,
-    item_name VARCHAR(100) NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    volume FLOAT
-);
-```
-
-#### Step 3: Flask Application Code (app.py)
-
-```python
-from flask import Flask, request, jsonify, send_file
+python
+Copiar código
+from flask import Flask, request, jsonify, send_file, render_template
 from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
-import json
-import os
 from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
-from twilio.rest import Client
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://inventory_user:your_password@localhost/inventory_db'
 db = SQLAlchemy(app)
 
-class BaseItem(db.Model):
-    __abstract__ = True
+class InventoryItem(db.Model):
+    __tablename__ = 'inventory_items'
     id = db.Column(db.Integer, primary_key=True)
     item_name = db.Column(db.String(100), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=0)
+    category = db.Column(db.String(50), nullable=False)  # E.g., 'supplies', 'labels', etc.
 
-class FoodItem(BaseItem):
-    __tablename__ = 'food_items'
-    expiration_date = db.Column(db.Date, nullable=False)
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, nullable=False)
+    change = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
 
-class BeverageItem(BaseItem):
-    __tablename__ = 'beverage_items'
-    volume = db.Column(db.Float, nullable=False)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/items', methods=['GET'])
 def get_items():
-    food_items = FoodItem.query.all()
-    beverage_items = BeverageItem.query.all()
-    
-    items = {
-        'food': [{"id": item.id, "name": item.item_name} for item in food_items],
-        'beverage': [{"id": item.id, "name": item.item_name} for item in beverage_items],
-    }
-    
-    return jsonify(items)
+    items = InventoryItem.query.all()
+    item_list = [{"id": item.id, "name": item.item_name, "quantity": item.quantity, "category": item.category} for item in items]
+    return jsonify(item_list)
 
 @app.route('/add-item', methods=['POST'])
 def add_item():
@@ -83,9 +52,10 @@ def add_item():
     item_id = data.get('id')
     quantity = data.get('quantity')
 
-    item = BaseItem.query.get(item_id)
+    item = InventoryItem.query.get(item_id)
     if item:
         item.quantity += int(quantity)
+        db.session.add(Transaction(item_id=item_id, change=int(quantity)))
         db.session.commit()
         return jsonify({"message": "Item added successfully."}), 200
     return jsonify({"message": "Item not found."}), 404
@@ -96,10 +66,11 @@ def delete_item():
     item_id = data.get('id')
     quantity = data.get('quantity')
 
-    item = BaseItem.query.get(item_id)
+    item = InventoryItem.query.get(item_id)
     if item:
         if item.quantity >= int(quantity):
             item.quantity -= int(quantity)
+            db.session.add(Transaction(item_id=item_id, change=-int(quantity)))
             db.session.commit()
             return jsonify({"message": "Item deleted successfully."}), 200
         return jsonify({"message": "Not enough quantity available."}), 400
@@ -107,81 +78,43 @@ def delete_item():
 
 @app.route('/generate-report', methods=['GET'])
 def generate_report():
-    items = FoodItem.query.all() + BeverageItem.query.all()
-    report_format = request.args.get('format', 'json')  # Default to JSON
-    data = [{"id": item.id, "item_name": item.item_name, "quantity": item.quantity} for item in items]
-    
-    if report_format == 'csv':
-        df = pd.DataFrame(data)
-        csv_file = 'inventory_report.csv'
-        df.to_csv(csv_file, index=False)
-        return send_file(csv_file, as_attachment=True)
-    
-    # Default to JSON
-    return jsonify(data)
+    transactions = Transaction.query.all()
+    data = [
+        {
+            "item_id": t.item_id,
+            "change": t.change,
+            "date": t.date.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for t in transactions
+    ]
 
-@app.route('/send-report', methods=['POST'])
-def send_report():
-    to_email = request.json.get('email')
-    to_number = request.json.get('number')
-    report_format = request.json.get('format', 'json')
+    df = pd.DataFrame(data)
+    report_file = 'inventory_report.xlsx'
+    df.to_excel(report_file, index=False)
 
-    items = FoodItem.query.all() + BeverageItem.query.all()
-    data = [{"id": item.id, "item_name": item.item_name, "quantity": item.quantity} for item in items]
-    
-    if report_format == 'csv':
-        df = pd.DataFrame(data)
-        csv_file = 'inventory_report.csv'
-        df.to_csv(csv_file, index=False)
-        
-        # Send Email
-        send_email(to_email, 'Inventory Report', 'Find the inventory report attached.', csv_file)
-        
-        # Send WhatsApp Message
-        send_whatsapp_message(to_number, 'Your inventory report has been sent via email.')
-        
-        return jsonify({"message": "Report sent successfully."}), 200
-    
-    # Send JSON report
-    json_file = 'inventory_report.json'
-    with open(json_file, 'w') as f:
-        json.dump(data, f)
-        
-    send_email(to_email, 'Inventory Report', 'Find the inventory report attached.', json_file)
-    send_whatsapp_message(to_number, 'Your inventory report has been sent via email.')
-    
-    return jsonify({"message": "Report sent successfully."}), 200
+    return send_file(report_file, as_attachment=True)
 
-def send_email(to_email, subject, body, attachment=None):
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = 'your_email@gmail.com'
-    msg['To'] = to_email
-
-    # Configure your SMTP server
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
-        server.starttls()
-        server.login('your_email@gmail.com', 'your_email_password')
-        server.send_message(msg)
-
-def send_whatsapp_message(to_number, message):
-    account_sid = 'your_account_sid'
-    auth_token = 'your_auth_token'
-    client = Client(account_sid, auth_token)
-    
-    client.messages.create(
-        body=message,
-        from_='whatsapp:+14155238886',  # Your Twilio WhatsApp number
-        to=f'whatsapp:{to_number}'
-    )
+@app.route('/transaction-history', methods=['GET'])
+def transaction_history():
+    transactions = Transaction.query.all()
+    history = [
+        {
+            "item_id": t.item_id,
+            "change": t.change,
+            "date": t.date.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for t in transactions
+    ]
+    return jsonify(history)
 
 if __name__ == '__main__':
+    db.create_all()  # Create tables
     app.run(debug=True)
-```
+Step 3: Update the Frontend HTML (templates/index.html)
+Here’s the updated HTML for a single table displaying all inventory items, suitable for your coffee roaster business:
 
-### Step 4: Frontend HTML (templates/index.html)
-
-```html
+html
+Copiar código
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,28 +156,61 @@ if __name__ == '__main__':
             <button type="button" class="btn btn-danger" id="deleteButton">Delete Item</button>
         </form>
 
-        <h2>Report</h2>
-        <button id="generateReport" class="btn btn-info btn-block">Generate Report</button>
-        <div id="report" class="mt-3"></div>
+        <h2 class="mt-4">Transaction History</h2>
+        <button id="generateReport" class="btn btn-info mb-3">Download Report (Excel)</button>
+        <table class="table table-striped" id="transactionTable">
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Change</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="transactionBody">
+                <!-- Transaction history will be populated here -->
+            </tbody>
+        </table>
     </div>
 
     <script>
         async function fetchItems() {
             const response = await fetch('/items');
-            const data = await response.json();
+            const items = await response.json();
 
             const selectElement = document.getElementById('itemSelect');
-            for (const category in data) {
-                data[category].forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id; // Using the ID for submission
-                    option.textContent = item.name; // Displaying the name
-                    selectElement.appendChild(option);
-                });
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id; // Using the ID for submission
+                option.textContent = `${item.name} (${item.category})`; // Displaying name and category
+                selectElement.appendChild(option);
+            });
+        }
+
+        async function fetchTransactionHistory() {
+            const response = await fetch('/transaction-history');
+            const history = await response.json();
+
+            const tbody = document.getElementById('transactionBody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            for (const t of history) {
+                const itemResponse = await fetch(`/items?id=${t.item_id}`);
+                const itemData = await itemResponse.json();
+                const item = itemData[0];
+
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${item.id}</td><td>${item.item_name}</td><td>${item.category}</td><td>${item.quantity}</td><td>${t.change}</td><td>${t.date}</td>`;
+                tbody.appendChild(row);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', fetchItems);
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchItems();
+            await fetchTransactionHistory();
+        });
 
         document.getElementById('inventoryForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -262,12 +228,11 @@ if __name__ == '__main__':
             if (response.ok) {
                 alert('Item added successfully!');
                 document.getElementById('inventoryForm').reset(); // Reset the form after submission
+                await fetchTransactionHistory(); // Refresh transaction history
             }
         });
 
-        document.getElementById('deleteButton').addEventListener('
-
-click', async () => {
+        document.getElementById('deleteButton').addEventListener('click', async () => {
             const selectedItemId = document.getElementById('itemSelect').value;
             const quantity = document.getElementById('quantityInput').value;
 
@@ -282,37 +247,4 @@ click', async () => {
             if (response.ok) {
                 alert('Item deleted successfully!');
                 document.getElementById('inventoryForm').reset(); // Reset the form after submission
-            }
-        });
-    </script>
-</body>
-</html>
-```
-
-### Step 5: Directory Structure
-
-Your project directory structure should look something like this:
-
-```
-/your_project_directory
-│
-├── app.py
-├── templates
-│   └── index.html
-└── requirements.txt
-```
-
-### Step 6: Running the Application
-
-1. Make sure your PostgreSQL database is running and accessible.
-2. Run the Flask app:
-
-```bash
-python app.py
-```
-
-3. Open your web browser and go to `http://127.0.0.1:5000/`.
-
-### Conclusion
-
-This complete implementation allows you to manage an inventory, select items, and specify quantities for addition or deletion. It also has endpoints for generating reports in CSV or JSON format and sending them via email and WhatsApp. Feel free to customize it further based on your specific requirements. If you have any questions or need more features, just let me know!-->
+                await
