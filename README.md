@@ -1,3 +1,6 @@
+# Apapacho_DB
+This project will be encharged of manage, deploy and generate a pilot or engine to generate an inventory stock or something related/useful for that one.
+<!--Absolutely! Below is a complete implementation of an inventory management system using Flask, SQLAlchemy, and a PostgreSQL database. The code includes all necessary components, from models to routes and the HTML frontend.
 Step 1: Update the Database Schema
 The table will store all types of items, regardless of category:
 
@@ -170,7 +173,7 @@ Copiar código
                 </tr>
             </thead>
             <tbody id="transactionBody">
-                <!-- Transaction history will be populated here -->
+                <!-- Transaction history will be populated here 
             </tbody>
         </table>
     </div>
@@ -248,3 +251,5 @@ Copiar código
                 alert('Item deleted successfully!');
                 document.getElementById('inventoryForm').reset(); // Reset the form after submission
                 await
+
+This complete implementation allows you to manage an inventory, select items, and specify quantities for addition or deletion. It also has endpoints for generating reports in CSV or JSON format and sending them via email and WhatsApp. Feel free to customize it further based on your specific requirements. If you have any questions or need more features, just let me know!-->
