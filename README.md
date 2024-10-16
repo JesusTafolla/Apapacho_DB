@@ -1,6 +1,6 @@
-<!--# Apapacho_DB
+# Apapacho_DB
 This project will be encharged of manage, deploy and generate a pilot or engine to generate an inventory stock or something related/useful for that one.
-Absolutely! Below is a complete implementation of an inventory management system using Flask, SQLAlchemy, and a PostgreSQL database. The code includes all necessary components, from models to routes and the HTML frontend.
+<!--Absolutely! Below is a complete implementation of an inventory management system using Flask, SQLAlchemy, and a PostgreSQL database. The code includes all necessary components, from models to routes and the HTML frontend.
 Step 1: Update the Database Schema
 The table will store all types of items, regardless of category:
 
