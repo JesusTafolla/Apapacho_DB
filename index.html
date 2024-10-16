@@ -60,8 +60,26 @@
     </head>
     <body>
         <div class="container">
-            <h1>Inventory Management</h1>
-    
+        <!-- Add New Item Section -->
+            <h2>Add New Item</h2>
+                <form id="newItemForm">
+                    <div class="form-group">
+                        <label for="newItemName">Item Name</label>
+                        <input type="text" class="form-control" id="newItemName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newItemQuantity">Quantity</label>
+                        <input type="number" class="form-control" id="newItemQuantity" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="newItemCategory">Category</label>
+                        <input type="text" class="form-control" id="newItemCategory" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </form>
+
+        <!-- Existing Inventory Management Section -->
+            <h2 class="mt-4">Manage Inventory</h2>
             <form id="inventoryForm">
                 <div class="form-group">
                     <label for="itemSelect">Select Item</label>
@@ -93,10 +111,128 @@
                 <tbody id="transactionBody">
                     <!-- Transaction history will be populated here -->
                 </tbody>
-            </table>    
+            </table>
         </div>
     
     <script>
+        async function fetchItems() {
+            const response = await fetch('/items');
+            const items = await response.json();
+
+            const selectElement = document.getElementById('itemSelect');
+            selectElement.innerHTML = '<option value="">Select an item...</option>';
+
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = '${item.item_name} (${item.category})';
+                selectElement.appendChild(option);
+            });
+        }
+
+        async function fetchTransactionHistory(){
+            const response = await fetch('/transaction-history');
+            const history = await response.json();
+
+            const tbody = document.getElementById('transactionBody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            for (const t of history) {
+                const itemResponse = await fetch('/items?id=${t.item_id}');
+                const itemData = await itemResponse.json();
+                const item = itemData[0];
+
+                const tow = document.createElement('tr');
+                row.innerHTML = '<td>${item.id}</td><td>${item.item_name}</td>td>${item.category}</td><td>${item.quantity}</td><td>${t.change}</td><td>${t.date}</td>';
+                tbody.appendChild(row);
+            }
+        }
+
+        document.getElementById('newItemForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const itemName = document.getElementById('newItemName').value;
+            const quantity = document.getElementById('newItemQuantity').value;
+            const category = document.getElementById('newItemCategory').value;
+
+            const response = await fetch('/add-new-item', {
+                method: 'POST',
+                headers:{
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ iitem_name: itemName, quantity: quantity, category: category })
+            });
+            
+            if (response.ok) {
+                alert('New item added succesfully!');
+                document.getElementById('newItemForm').reset();
+                await fetchItems();
+            } else {
+                alert('Failed to add new item. Please try again.');
+            }
+        });
+
+        document.getElementById('inventoryForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const selectItemId = document.getElementById('itemSelect').value;
+            const quantity = document.getElementById('quantityInput').value;
+
+            const response = await fetch('/add-item',{
+                method: 'POST',
+                headers:{
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ item_id: selectItemId, quantity: quantity })
+            });
+            
+            if (response.ok) {
+                alert('Quantity added succesfully!');
+                document.getElementById('inventoryForm').reset();
+                await fetchTransactionHistory();
+            }
+        });
+
+        document.getElementById('deleteButton').addEventListener('click', async () => {
+            const selectedItemId = document.getElementById('itemSelect').value;
+            const quantity = document.getElementById('quantityInput').value;
+
+            const response = await fetch('/delete-item',{
+                method: 'POST',
+                headers:{
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: selectedItemId, quantity: quantity })
+            });
+
+            if (response.ok) {
+                alert('Quantity deleted successfully!');
+                document.getElementById('inventoryForm').reset();
+                await fetchTransactionHistory();
+            } else {
+                alert('Failed to delete quantity. Please try again.');
+            }
+        });
+
+        document.getElementById('generateReport').addEventListener('click', async () => {
+            const response = await fetch('/generate-report');
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'inventory_report.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                alert('Report downloaded successfully!');
+            } else {
+                alert('Failed to generate report. Please try again.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchItems();
+            await fetchTransactionHistory();
+        });
 
     </script>
         
