@@ -6,12 +6,10 @@ The table will store all types of items, regardless of category:
 
 sql
 Copiar código
-CREATE TABLE inventory_items (
-    id SERIAL PRIMARY KEY,
-    item_name VARCHAR(100) NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    category VARCHAR(50) NOT NULL -- E.g., 'supplies', 'labels', 'coffee beans', etc.
-);
+CREATE TABLE inventory_items (id SERIAL PRIMARY KEY,item_name VARCHAR(100) NOT NULL,
+quantity INTEGER NOT NULL DEFAULT 0,category VARCHAR(50) NOT NULL);
+
+
 Step 2: Update the Flask Application Code (app.py)
 Here’s the updated Flask app using a single inventory model that suits your coffee roaster business needs:
 

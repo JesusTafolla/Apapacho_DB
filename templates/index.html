@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Inventory Management</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-        <style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
         body {
             background-color: #f9f5e5;
             font-family: 'Roboto', sans-serif;
@@ -57,63 +57,62 @@
             color: #8b4513;
         }
     </style>
-    </head>
-    <body>
-        <div class="container">
-        <!-- Add New Item Section -->
-            <h2>Add New Item</h2>
-                <form id="newItemForm">
-                    <div class="form-group">
-                        <label for="newItemName">Item Name</label>
-                        <input type="text" class="form-control" id="newItemName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="newItemQuantity">Quantity</label>
-                        <input type="number" class="form-control" id="newItemQuantity" required min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="newItemCategory">Category</label>
-                        <input type="text" class="form-control" id="newItemCategory" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Item</button>
-                </form>
+</head>
+<body>
+    <div class="container">
+        <h2>Add New Item</h2>
+        <form id="newItemForm">
+            <div class="form-group">
+                <label for="newItemName">Item Name</label>
+                <input type="text" class="form-control" id="newItemName" required>
+            </div>
+            <div class="form-group">
+                <label for="newItemQuantity">Quantity</label>
+                <input type="number" class="form-control" id="newItemQuantity" required min="0">
+            </div>
+            <div class="form-group">
+                <label for="newItemCategory">Category</label>
+                <input type="text" class="form-control" id="newItemCategory" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Item</button>
+        </form>
 
-        <!-- Existing Inventory Management Section -->
-            <h2 class="mt-4">Manage Inventory</h2>
-            <form id="inventoryForm">
-                <div class="form-group">
-                    <label for="itemSelect">Select Item</label>
-                    <select class="form-control" id="itemSelect" required>
-                        <option value="">Select an item...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="quantityInput">Quantity</label>
-                    <input type="number" class="form-control" id="quantityInput" required min="1">
-                </div>
-                <button type="submit" class="btn btn-success" id="addButton">Add Item</button>
-                <button type="button" class="btn btn-danger" id="deleteButton">Delete Item</button>
-            </form>
+        <h2 class="mt-4">Manage Inventory</h2>
+        <form id="inventoryForm">
+            <div class="form-group">
+                <label for="itemSelect">Select Item</label>
+                <select class="form-control" id="itemSelect" required>
+                    <option value="">Select an item...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="quantityInput">Quantity</label>
+                <input type="number" class="form-control" id="quantityInput" required min="1">
+            </div>
+            <button type="submit" class="btn btn-success" id="addButton">Add Item</button>
+            <button type="button" class="btn btn-danger" id="deleteButton">Delete Item</button>
+        </form>
 
-            <h2 class="mt-4">Transaction History</h2>
-            <button id="generateReport" class="btn btn-info mb-3">Download Report (Excel)</button>
-            <table class="table table-striped" id="transactionTable">
-                <thead>
-                    <tr>
-                        <th>Item ID</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Quantity</th>
-                        <th>Change</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="transactionBody">
-                    <!-- Transaction history will be populated here -->
-                </tbody>
-            </table>
-        </div>
-    
+        <h2 class="mt-4">Transaction History</h2>
+        <button id="generateReport" class="btn btn-info mb-3">Download Report (Excel)</button>
+        <table class="table table-striped" id="transactionTable">
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Name</th> <!-- Already included -->
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Change</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            
+            <tbody id="transactionBody">
+                <!-- Transaction history will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
     <script>
         async function fetchItems() {
             const response = await fetch('/items');
@@ -125,12 +124,12 @@
             items.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.id;
-                option.textContent = '${item.item_name} (${item.category})';
+                option.textContent = `${item.name} (${item.category})`;
                 selectElement.appendChild(option);
             });
         }
 
-        async function fetchTransactionHistory(){
+        async function fetchTransactionHistory() {
             const response = await fetch('/transaction-history');
             const history = await response.json();
 
@@ -138,15 +137,20 @@
             tbody.innerHTML = ''; // Clear existing rows
 
             for (const t of history) {
-                const itemResponse = await fetch('/items?id=${t.item_id}');
-                const itemData = await itemResponse.json();
-                const item = itemData[0];
-
-                const tow = document.createElement('tr');
-                row.innerHTML = '<td>${item.id}</td><td>${item.item_name}</td>td>${item.category}</td><td>${item.quantity}</td><td>${t.change}</td><td>${t.date}</td>';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${t.item_id}</td>
+                    <td>${t.name}</td> <!-- Add the item name here -->
+                    <td>${t.category}</td> <!-- Add the item category here -->
+                    <td>${t.quantity}</td>
+                    <td>${t.change}</td>
+                    <td>${t.date}</td>`;
                 tbody.appendChild(row);
             }
         }
+
+
+
 
         document.getElementById('newItemForm').addEventListener('submit', async e => {
             e.preventDefault();
@@ -156,14 +160,14 @@
 
             const response = await fetch('/add-new-item', {
                 method: 'POST',
-                headers:{
+                headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ iitem_name: itemName, quantity: quantity, category: category })
+                body: JSON.stringify({ item_name: itemName, quantity: quantity, category: category })
             });
-            
+
             if (response.ok) {
-                alert('New item added succesfully!');
+                alert('New item added successfully!');
                 document.getElementById('newItemForm').reset();
                 await fetchItems();
             } else {
@@ -176,18 +180,20 @@
             const selectItemId = document.getElementById('itemSelect').value;
             const quantity = document.getElementById('quantityInput').value;
 
-            const response = await fetch('/add-item',{
+            const response = await fetch('/add-item', {
                 method: 'POST',
-                headers:{
+                headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ item_id: selectItemId, quantity: quantity })
             });
-            
+
             if (response.ok) {
-                alert('Quantity added succesfully!');
+                alert('Quantity added successfully!');
                 document.getElementById('inventoryForm').reset();
                 await fetchTransactionHistory();
+            } else {
+                alert('Failed to add quantity. Please try again.');
             }
         });
 
@@ -195,12 +201,12 @@
             const selectedItemId = document.getElementById('itemSelect').value;
             const quantity = document.getElementById('quantityInput').value;
 
-            const response = await fetch('/delete-item',{
+            const response = await fetch('/delete-item', {
                 method: 'POST',
-                headers:{
+                headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ id: selectedItemId, quantity: quantity })
+                body: JSON.stringify({ item_id: selectedItemId, quantity: quantity })
             });
 
             if (response.ok) {
@@ -213,8 +219,16 @@
         });
 
         document.getElementById('generateReport').addEventListener('click', async () => {
-            const response = await fetch('/generate-report');
-            if (response.ok) {
+            //const userName = prompt('Please enter your name to generate the report:');
+            //if (!userName) {
+            //    alert('Name is required to generate the report.');
+            //    return;
+            //}
+            try {
+                const response = await fetch(`/generate-report`);
+                if (!response.ok) {
+                    throw new Error('Failed to generate report.');
+                }
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -224,8 +238,9 @@
                 a.click();
                 a.remove();
                 alert('Report downloaded successfully!');
-            } else {
-                alert('Failed to generate report. Please try again.');
+            } catch (error) {
+                alert(error.message);
+                console.error(error);
             }
         });
 
@@ -233,8 +248,6 @@
             await fetchItems();
             await fetchTransactionHistory();
         });
-
     </script>
-        
-
+</body>
 </html>
