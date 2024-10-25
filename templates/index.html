@@ -94,6 +94,14 @@
         </form>
 
         <h2 class="mt-4">Transaction History</h2>
+        <div class="form-group">
+            <label for="sortSelect">Sort By</label>
+            <select class="form-control" id="sortSelect">
+                <option value="date">Date Modified</option>
+                <option value="id">Item ID</option>
+                <option value="name">Item Name</option>
+            </select>
+        </div>
         <button id="generateReport" class="btn btn-info mb-3">Download Report (Excel)</button>
         <table class="table table-striped" id="transactionTable">
             <thead>
@@ -140,16 +148,14 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${t.item_id}</td>
-                    <td>${t.name}</td> <!-- Add the item name here -->
-                    <td>${t.category}</td> <!-- Add the item category here -->
+                    <td>${t.name}</td>
+                    <td>${t.category}</td>
                     <td>${t.quantity}</td>
                     <td>${t.change}</td>
                     <td>${t.date}</td>`;
                 tbody.appendChild(row);
             }
         }
-
-
 
 
         document.getElementById('newItemForm').addEventListener('submit', async e => {
@@ -169,11 +175,13 @@
             if (response.ok) {
                 alert('New item added successfully!');
                 document.getElementById('newItemForm').reset();
-                await fetchItems();
+                await fetchItems(); // Refresh item list
+                await fetchTransactionHistory(); // Refresh transaction history to reflect new item
             } else {
                 alert('Failed to add new item. Please try again.');
             }
         });
+
 
         document.getElementById('inventoryForm').addEventListener('submit', async e => {
             e.preventDefault();
@@ -219,13 +227,10 @@
         });
 
         document.getElementById('generateReport').addEventListener('click', async () => {
-            //const userName = prompt('Please enter your name to generate the report:');
-            //if (!userName) {
-            //    alert('Name is required to generate the report.');
-            //    return;
-            //}
+            const sortBy = document.getElementById('sortSelect').value;
+
             try {
-                const response = await fetch(`/generate-report`);
+                const response = await fetch(`/generate-report?sort_by=${sortBy}`);
                 if (!response.ok) {
                     throw new Error('Failed to generate report.');
                 }
@@ -243,6 +248,7 @@
                 console.error(error);
             }
         });
+
 
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchItems();
